@@ -340,14 +340,13 @@
             } else {
                 targetApiUrl += `word=${encodeURIComponent(query)}`;
             }
-            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetApiUrl)}`;
+
+            // CORSエラーを防ぐため別系統の安全なプロキシを使用
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetApiUrl)}`;
 
             try {
                 const res = await fetch(proxyUrl);
-                const json = await res.json();
-                if (!json || !json.contents) throw new Error("API Error");
-
-                const data = JSON.parse(json.contents);
+                const data = await res.json();
 
                 if (!data || data.length < 2) {
                     alert('作品が見つかりませんでした。');
@@ -430,23 +429,19 @@
 
             try {
                 const targetUrl = `https://ncode.syosetu.com/${currentNovel.ncode}/${epNum}/`;
-                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
                 
                 const res = await fetch(proxyUrl);
-                const data = await res.json();
+                const htmlText = await res.text();
                 
-                if (data && data.contents) {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(data.contents, 'text/html');
-                    
-                    const honbun = doc.querySelector('.p-novel__text, #novel_honbun');
-                    if (honbun) {
-                        document.getElementById('readerContent').innerText = honbun.innerText;
-                    } else {
-                        document.getElementById('readerContent').innerText = "本文の抽出に失敗しました。ブラウザで直接ご確認ください。";
-                    }
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(htmlText, 'text/html');
+                
+                const honbun = doc.querySelector('.p-novel__text, #novel_honbun');
+                if (honbun) {
+                    document.getElementById('readerContent').innerText = honbun.innerText;
                 } else {
-                    throw new Error("Failed to load");
+                    document.getElementById('readerContent').innerText = "本文の抽出に失敗しました。ブラウザで直接ご確認ください。";
                 }
             } catch (e) {
                 console.error(e);
