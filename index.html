@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自分用なろうリーダー</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f8;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --accent-color: #0066cc;
+            --border-color: #e0e0e0;
+        }
+
+        body.dark {
+            --bg-color: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --text-color: #e0e0e0;
+            --accent-color: #4d94ff;
+            --border-color: #444444;
+        }
+
+        body.sepia {
+            --bg-color: #f4ecd8;
+            --card-bg: #fdf6e3;
+            --text-color: #5b4636;
+            --accent-color: #b58900;
+            --border-color: #e0d7c3;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        header {
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        button, select {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button.primary {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 0 15px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-size: 16px;
+        }
+
+        .bookmarks-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .bm-item {
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-color);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* 本文リーダーの設定 */
+        .reader-view {
+            display: none;
+        }
+
+        .reader-content {
+            font-size: 18px;
+            line-height: 1.8;
+            margin-top: 20px;
+            white-space: pre-wrap;
+        }
+
+        .reader-content.vertical {
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+            height: 60vh;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 10px;
+            width: 100%;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+
+        .episodes-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+
+        .ep-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+
+        .ep-item:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>📖 自分用なろうリーダー</h1>
+        <div class="controls">
+            <select id="themeSelect" onchange="changeTheme(this.value)">
+                <option value="light">ライト</option>
+                <option value="dark">ダーク</option>
+                <option value="sepia">セピア</option>
+            </select>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <!-- お気に入り一覧 -->
+        <div class="card">
+            <h3>⭐ お気に入り作品</h3>
+            <div id="bookmarks" class="bookmarks-list">
+                <p style="color: #888; font-size: 14px;">まだお気に入りがありません</p>
+            </div>
+        </div>
+
+        <!-- 検索入力 -->
+        <div class="card">
+            <h3>🔍 作品を探す</h3>
+            <p style="font-size: 13px; color: #888; margin: 5px 0;">Nコードを入力（例: n2267be）</p>
+            <div class="search-box">
+                <input type="text" id="ncode" placeholder="例: n2267be" value="n2267be">
+                <button class="primary" onclick="searchNovel()">検索</button>
+            </div>
+        </div>
+
+        <!-- 作品情報表示 -->
+        <div id="novelInfo" class="card" style="display:none;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <h2 id="title" style="margin-top:0;"></h2>
+                    <p><strong>作者:</strong> <span id="author"></span> | <strong>全話数:</strong> <span id="epCount"></span>話</p>
+                </div>
+                <button onclick="toggleBookmark()" id="bmBtn">⭐ お気に入り追加</button>
+            </div>
+            <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 15px 0;">
+            <p id="synopsis" style="white-space: pre-wrap; line-height: 1.6;"></p>
+
+            <h4>目次</h4>
+            <div id="episodes" class="episodes-list"></div>
+        </div>
+
+        <!-- 本文リーダー画面 -->
+        <div id="readerView" class="card reader-view">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <button onclick="closeReader()">← 目次に戻る</button>
+                <div class="controls">
+                    <button onclick="toggleVertical()">縦/横切替</button>
+                    <button onclick="changeFontSize(1)">A+</button>
+                    <button onclick="changeFontSize(-1)">A-</button>
+                </div>
+            </div>
+
+            <h3 id="epTitle" style="margin-top: 20px; text-align: center;"></h3>
+            <div id="readerContent" class="reader-content"></div>
+
+            <div class="nav-buttons">
+                <button id="prevEpBtn" onclick="loadEpisode(currentEp - 1)">前へ</button>
+                <span id="epProgress"></span>
+                <button id="nextEpBtn" onclick="loadEpisode(currentEp + 1)">次へ</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let currentNovel = null;
+        let currentEp = 1;
+        let fontSize = 18;
+        let isVertical = false;
+
+        // デモ用データベース（CORS通信制限を意識せず確実に動作させるため）
+        const sampleNovels = {
+            "n2267be": {
+                title: "本好きの下剋上～司書になるためには手段を選んでいられません～",
+                writer: "香月美夜",
+                story: "本好きの女子大生が事故に遭い、意識を取り戻した時は、兵士の娘っ子マイン（5歳）として異世界に転生していた。\n文字が読めない、本がない。平民の生活水準では本が手に入らない。\n無いなら自分で作ってしまおう！ 本に囲まれる生活を目指し、マインは奮闘する。",
+                general_all_no: 5,
+                episodes: {
+                    1: { title: "プロローグ", body: "本が好きだ。小説、専門書、漫画、雑誌、写真集、辞書、単行本……本と呼ばれるものなら、文字で埋め尽くされた一枚の紙でも構わない。\n本を読むことでしか得られない栄養がある。\n……そう思っていた女子大生・本須麗乃は、地震で崩れてきた大量の本に埋もれて命を落とした。\n\n目覚めた時、そこは知らない木造の部屋だった。" },
+                    2: { title: "第1話 異世界の日常", body: "「マイン、起きなさい！」\n頭に響く声に目を覚ます。\n目の前にいたのは、見知らぬ外国人のような美しい女性だった。\n自分が5歳の少女「マイン」になってしまっていることに気づくまで、そう時間はかからなかった。" },
+                    3: { title: "第2話 本を探そう", body: "家の中を探してみたが、本らしきものはどこにもない。\n「お母さん、本はどこ？」\n「ホン？ なんだいそれは」\nこの世界には、紙も本も一般家庭には存在しないことを知り、絶望が襲いかかった。" },
+                    4: { title: "第3話 本がないなら作ればいい", body: "本がないなら、自分で作るしかない！\nまずは紙の代わりになるものを探すことにした。\n粘土板？ パピルス？ 木簡？\n5歳の幼い体と熱病に耐えながら、私の本作りが始まった。" },
+                    5: { title: "第4話 粘土板への挑戦", body: "粘土を捏ねて平らに伸ばし、尖った枝で文字を刻む。\nそれを乾燥させて焼けば、立派な粘土板本ができるはず！\n私は庭の隅で夢中になって粘土を捏ね始めた。" }
+                }
+            }
+        };
+
+        window.onload = function() {
+            renderBookmarks();
+        };
+
+        function changeTheme(theme) {
+            document.body.className = theme;
+        }
+
+        function searchNovel() {
+            const ncode = document.getElementById('ncode').value.trim().toLowerCase();
+            if (!ncode) return alert('Nコードを入力してください');
+
+            // データ取得（サンプルの場合はすぐ取得）
+            if (sampleNovels[ncode]) {
+                currentNovel = { ncode, ...sampleNovels[ncode] };
+                displayNovel(currentNovel);
+            } else {
+                // 仮のダミー生成（未登録のNコードでも遊べるように）
+                currentNovel = {
+                    ncode,
+                    title: `作品 (${ncode.toUpperCase()})`,
+                    writer: "なろう作家",
+                    story: "これはサンプルで読み込まれた作品のあらすじです。実際のAPI接続時にはリアルタイムのデータが入ります。",
+                    general_all_no: 3,
+                    episodes: {
+                        1: { title: "第1話 はじまり", body: "ここに第1話の本文が表示されます。" },
+                        2: { title: "第2話 冒険へ", body: "ここに第2話の本文が表示されます。" },
+                        3: { title: "第3話 試練", body: "ここに第3話の本文が表示されます。" }
+                    }
+                };
+                displayNovel(currentNovel);
+            }
+        }
+
+        function displayNovel(novel) {
+            document.getElementById('title').innerText = novel.title;
+            document.getElementById('author').innerText = novel.writer;
+            document.getElementById('epCount').innerText = novel.general_all_no;
+            document.getElementById('synopsis').innerText = novel.story;
+
+            const epContainer = document.getElementById('episodes');
+            epContainer.innerHTML = '';
+
+            for (let i = 1; i <= novel.general_all_no; i++) {
+                const ep = novel.episodes[i] || { title: `第${i}話` };
+                const div = document.createElement('div');
+                div.className = 'ep-item';
+                div.innerText = `${i}. ${ep.title}`;
+                div.onclick = () => openEpisode(i);
+                epContainer.appendChild(div);
+            }
+
+            document.getElementById('novelInfo').style.display = 'block';
+            document.getElementById('readerView').style.display = 'none';
+            updateBmBtn();
+        }
+
+        function openEpisode(epNum) {
+            currentEp = epNum;
+            loadEpisode(epNum);
+            document.getElementById('novelInfo').style.display = 'none';
+            document.getElementById('readerView').style.display = 'block';
+        }
+
+        function loadEpisode(epNum) {
+            if (!currentNovel || !currentNovel.episodes[epNum]) return;
+            currentEp = epNum;
+            const ep = currentNovel.episodes[epNum];
+
+            document.getElementById('epTitle').innerText = `${epNum}. ${ep.title}`;
+            document.getElementById('readerContent').innerText = ep.body;
+            document.getElementById('epProgress').innerText = `${epNum} / ${currentNovel.general_all_no}`;
+
+            document.getElementById('prevEpBtn').disabled = (epNum <= 1);
+            document.getElementById('nextEpBtn').disabled = (epNum >= currentNovel.general_all_no);
+
+            window.scrollTo(0, 0);
+        }
+
+        function closeReader() {
+            document.getElementById('readerView').style.display = 'none';
+            document.getElementById('novelInfo').style.display = 'block';
+        }
+
+        function toggleVertical() {
+            isVertical = !isVertical;
+            const content = document.getElementById('readerContent');
+            if (isVertical) {
+                content.classList.add('vertical');
+            } else {
+                content.classList.remove('vertical');
+            }
+        }
+
+        function changeFontSize(delta) {
+            fontSize = Math.max(12, Math.min(32, fontSize + delta * 2));
+            document.getElementById('readerContent').style.fontSize = fontSize + 'px';
+        }
+
+        // ブックマーク機能
+        function getBookmarks() {
+            return JSON.parse(localStorage.getItem('narou_bookmarks') || '[]');
+        }
+
+        function toggleBookmark() {
+            if (!currentNovel) return;
+            let bms = getBookmarks();
+            const index = bms.findIndex(b => b.ncode === currentNovel.ncode);
+
+            if (index >= 0) {
+                bms.splice(index, 1);
+            } else {
+                bms.push({ ncode: currentNovel.ncode, title: currentNovel.title });
+            }
+
+            localStorage.setItem('narou_bookmarks', JSON.stringify(bms));
+            updateBmBtn();
+            renderBookmarks();
+        }
+
+        function updateBmBtn() {
+            if (!currentNovel) return;
+            const bms = getBookmarks();
+            const isBm = bms.some(b => b.ncode === currentNovel.ncode);
+            document.getElementById('bmBtn').innerText = isBm ? "★ お気に入り解除" : "⭐ お気に入り追加";
+        }
+
+        function renderBookmarks() {
+            const bms = getBookmarks();
+            const container = document.getElementById('bookmarks');
+
+            if (bms.length === 0) {
+                container.innerHTML = '<p style="color: #888; font-size: 14px;">まだお気に入りがありません</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            bms.forEach(bm => {
+                const div = document.createElement('div');
+                div.className = 'bm-item';
+                div.innerHTML = `<span>${bm.title}</span>`;
+                div.onclick = () => {
+                    document.getElementById('ncode').value = bm.ncode;
+                    searchNovel();
+                };
+                container.appendChild(div);
+            });
+        }
+    </script>
+</body>
+</html>
