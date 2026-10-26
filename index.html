@@ -305,6 +305,7 @@
         function changeTheme(theme) {
             document.body.className = theme;
         }
+        window.changeTheme = changeTheme;
 
         function switchTab(tabName) {
             document.getElementById('viewSearch').classList.remove('active');
@@ -321,6 +322,7 @@
                 renderBookmarks();
             }
         }
+        window.switchTab = switchTab;
 
         async function searchNovel() {
             const query = document.getElementById('searchInput').value.trim();
@@ -332,7 +334,6 @@
             document.getElementById('novelInfo').style.display = 'none';
             document.getElementById('readerView').style.display = 'none';
 
-            // CORSブロックを回避するため、alloriginsプロキシ経由でなろうAPIに安全にアクセス
             let targetApiUrl = `https://api.syosetu.com/novelapi/api/?out=json&of=t-n-w-s-ga&lim=1&`;
             if (isNcode) {
                 targetApiUrl += `ncode=${query.toLowerCase()}`;
@@ -374,11 +375,13 @@
                 alert('API通信に失敗しました。ネット接続を確認してください。');
             }
         }
+        window.searchNovel = searchNovel;
 
         async function selectNovelByNcode(ncode) {
             document.getElementById('searchInput').value = ncode;
             searchNovel();
         }
+        window.selectNovelByNcode = selectNovelByNcode;
 
         function loadNovelDetails(item) {
             currentNovel = {
@@ -409,6 +412,7 @@
             document.getElementById('novelInfo').style.display = 'block';
             updateBmBtn();
         }
+        window.loadNovelDetails = loadNovelDetails;
 
         async function openEpisode(epNum) {
             currentEp = epNum;
@@ -452,16 +456,19 @@
                 document.getElementById('readerLoading').style.display = 'none';
             }
         }
+        window.openEpisode = openEpisode;
 
         function closeReader() {
             document.getElementById('readerView').style.display = 'none';
             document.getElementById('novelInfo').style.display = 'block';
         }
+        window.closeReader = closeReader;
 
         function changeFontSize(delta) {
             fontSize = Math.max(12, Math.min(32, fontSize + delta));
             document.getElementById('readerContent').style.fontSize = fontSize + 'px';
         }
+        window.changeFontSize = changeFontSize;
 
         function getBookmarks() {
             return JSON.parse(localStorage.getItem('narou_bookmarks') || '[]');
@@ -483,3 +490,49 @@
                     general_all_no: currentNovel.general_all_no
                 });
             }
+
+            localStorage.setItem('narou_bookmarks', JSON.stringify(bms));
+            updateBmBtn();
+            updateBmCount();
+        }
+        window.toggleBookmark = toggleBookmark;
+
+        function updateBmBtn() {
+            if (!currentNovel) return;
+            const bms = getBookmarks();
+            const isBm = bms.some(b => b.ncode === currentNovel.ncode);
+            document.getElementById('bmBtn').innerText = isBm ? "★ お気に入り解除" : "⭐ お気に入り追加";
+            updateBmCount();
+        }
+
+        function updateBmCount() {
+            const bms = getBookmarks();
+            document.getElementById('bmCount').innerText = bms.length;
+        }
+
+        function renderBookmarks() {
+            const bms = getBookmarks();
+            const container = document.getElementById('bookmarks');
+            updateBmCount();
+
+            if (bms.length === 0) {
+                container.innerHTML = '<p style="color: #888; font-size: 14px;">お気に入りに登録された作品はありません</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            bms.forEach(bm => {
+                const div = document.createElement('div');
+                div.className = 'bm-item';
+                div.innerHTML = `<div><strong>${bm.title}</strong><br><small style="color:#888;">作者: ${bm.writer}</small></div>`;
+                div.onclick = () => {
+                    switchTab('search');
+                    loadNovelDetails(bm);
+                };
+                container.appendChild(div);
+            });
+        }
+        window.renderBookmarks = renderBookmarks;
+    </script>
+</body>
+</html>
