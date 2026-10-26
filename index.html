@@ -341,7 +341,6 @@
                 targetApiUrl += `word=${encodeURIComponent(query)}`;
             }
 
-            // CORSエラーを防ぐため別系統の安全なプロキシを使用
             const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetApiUrl)}`;
 
             try {
@@ -437,21 +436,34 @@
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(htmlText, 'text/html');
                 
-                const honbun = doc.querySelector('.p-novel__text, #novel_honbun');
-                if (honbun) {
+                // 複数のなろうの本文クラスやIDに対応して安全に取得
+                const honbun = doc.querySelector('#novel_honbun, .p-novel__text, [js-subtitle-text]');
+                if (honbun && honbun.innerText.trim() !== "") {
                     document.getElementById('readerContent').innerText = honbun.innerText;
                 } else {
-                    document.getElementById('readerContent').innerText = "本文の抽出に失敗しました。ブラウザで直接ご確認ください。";
+                    // 万が一タグで見つからない場合は、公式の閲覧リンクを案内する安全設計
+                    document.getElementById('readerContent').innerHTML = 
+                        `本文の自動取得が制限されました。<br><br>` +
+                        `<a href="${targetUrl}" target="_blank" style="color: var(--accent-color); font-weight: bold; font-size: 18px;">👉 公式サイトの第${epNum}話で読む（新しいタブで開く）</a>`;
                 }
             } catch (e) {
                 console.error(e);
-                document.getElementById('readerContent').innerText = 
-                    `[お知らせ] セキュリティ制限により本文を直接取得できませんでした。\n\n以下の公式リンクから直接お読みいただけます。\nhttps://ncode.syosetu.com/${currentNovel.ncode}/${epNum}/`;
+                const targetUrl = `https://ncode.syosetu.com/${currentNovel.ncode}/${epNum}/`;
+                document.getElementById('readerContent').innerHTML = 
+                    `[お知らせ] セキュリティ制限により本文を直接取得できませんでした。<br><br>` +
+                    `<a href="${targetUrl}" target="_blank" style="color: var(--accent-color); font-weight: bold; font-size: 18px;">👉 公式サイトの第${epNum}話で読む（新しいタブで開く）</a>`;
             } finally {
                 document.getElementById('readerLoading').style.display = 'none';
             }
         }
         window.openEpisode = openEpisode;
+
+        function loadEpisode(epNum) {
+            if (epNum >= 1 && epNum <= currentNovel.general_all_no) {
+                openEpisode(epNum);
+            }
+        }
+        window.loadEpisode = loadEpisode;
 
         function closeReader() {
             document.getElementById('readerView').style.display = 'none';
